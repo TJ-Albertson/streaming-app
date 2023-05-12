@@ -1,21 +1,63 @@
 const express = require("express");
+const app = require("express")();
 const path = require('path');
 const cors = require("cors");
 const fs = require('fs');
+const http = require('http').Server(app);;
+const socketIO = require('socket.io');
+const io = require('socket.io')(http);
 
-const app = express();
+
+const videoPath = 'videos/pgl.mp4';
 
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Serve the React application on all routes except API endpoints
-app.get(/^\/(?!api).*/, (req, res) => {
+app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
+});
+
+io.on('connection', (socket) => {
+  console.log('New client connected');
+
+
+  // Stream the video to the client
+  const stream = fs.createReadStream(videoPath);
+
+  stream.on('data', (chunk) => {
+    socket.emit('data', chunk);
+  });
+
+  stream.on('end', () => {
+    socket.emit('end');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+  });
+
+  socket.on('chat message', (msg) => {
+    console.log('message: ' + msg);
+    io.emit('chat message', msg);
+  });
 });
 
 app.get("/api/message", (req, res) => {
   res.json({ message: "Hello from the server!" });
 });
+
+
+//
+
+
+
+
+
+
+
+
+
 
 const videoFileMap={
   'video01':'videos/video1.mp4',
@@ -60,6 +102,7 @@ app.get('/api/videos/:filename', (req, res)=>{
 })
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+
+http.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

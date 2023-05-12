@@ -1,41 +1,51 @@
-import logo from './logo.svg';
-import './App.css';
-import Message from './Components/Message';
+import React, { useState, useEffect } from 'react';
 
-
-import { useState } from 'react';
 import VideoPlayer from './Components/VideoPlayer';
+import videoplayer2 from './Components/videoplayer2';
+
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:5000');
 
 
 function App() {
-
+  const [messages, setMessages] = useState([]);
+  const [inputValue, setInputValue] = useState('');
   const [videoId, setVideoId] = useState(null)
+
+  useEffect(() => {
+    socket.on('chat message', (msg) => {
+      setMessages([...messages, msg]);
+    });
+  }, [messages]);
 
   function playVideo(e, videoId){
     e.preventDefault()
     setVideoId(videoId)
   }
 
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    socket.emit('chat message', inputValue);
+    setInputValue('');
+  };
+
   return (
-    <div className="App">
-      {videoId && <VideoPlayer videoId={videoId}></VideoPlayer>} <br />
-      <button onClick={(e)=>{playVideo(e, 'video01')}}>Play Video 1</button>
-      <button onClick={(e)=>{playVideo(e, 'video02')}}>Play Video 2</button>
-      <Message/>
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div>
+      <videoplayer2/>
+      <ul>
+        {messages.map((msg, index) => (
+          <li key={index}>{msg}</li>
+        ))}
+      </ul>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(event) => setInputValue(event.target.value)}
+        />
+        <button type="submit">Send</button>
+      </form>
     </div>
   );
 }
