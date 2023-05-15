@@ -1,0 +1,61 @@
+<video id="video" muted></video>
+<button id="pause">Pause</button>
+<button id="play">Play</button>
+
+<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+<script src="/videoSocket.io/videoSocket.io.js"></script>
+<script>
+    const player = dashjs.MediaPlayer().create();
+    player.initialize(document.querySelector('#video'), 'http://localhost:3000/stream.mpd', false);
+
+    const pauseButton = document.getElementById("pause");
+    const playButton = document.getElementById("play");
+    const video = document.getElementById("video");
+
+    var videoSocket = io('/video');
+    var chatSocket = io('/chat');
+
+    videoSocket.on('play', (time) => {
+        console.log('Play event received from server');
+        player.seek(time);
+        player.play();
+    });
+
+    // Handle pause event
+    videoSocket.on('pause', () => {
+        console.log('Pause event received from server');
+        player.pause();
+    });
+
+    // Handle seek event
+    videoSocket.on('seek', (time) => {
+        console.log('Seek event received from server, time:', time);
+        player.seek(time);
+    });
+
+    // Handle play button click event
+    playButton.addEventListener('click', () => {
+        console.log('Play button clicked');
+        videoSocket.emit('play');
+    });
+
+    // Handle pause button click event
+    pauseButton.addEventListener('click', () => {
+        console.log('Pause button clicked');
+        videoSocket.emit('pause');
+    });
+
+    video.addEventListener('ended', () => {
+        videoSocket.emit('video end');
+    })
+
+    /**
+    // Handle seek bar change event
+    document.querySelector('#seekBar').addEventListener('change', (event) => {
+        const time = player.duration() * (event.target.value / 100);
+        console.log('Seek bar changed, time:', time);
+        videoSocket.emit('seek', time);
+    });
+    */
+
+</script>

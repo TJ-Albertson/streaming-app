@@ -1,60 +1,193 @@
-<video id="video" muted></video>
-<button id="pause">Pause</button>
-<button id="play">Play</button>
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
 
-<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
-<script src="/socket.io/socket.io.js"></script>
-<script>
-    const player = dashjs.MediaPlayer().create();
-    player.initialize(document.querySelector('#video'), 'http://localhost:3000/stream.mpd', false);
+    <style>
+      html, body {
+  height: 100%;
+  margin: 0;
+       
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+} 
 
-    const pauseButton = document.getElementById("pause");
-    const playButton = document.getElementById("play");
-    const video = document.getElementById("video");
+      .grid-container {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        grid-template-rows: 50px auto minmax(0, calc(100% - 50px)) 50px;
+        grid-gap: 10px;
+        height: 100%;
+      }
 
-    var socket = io('/video');
+      .grid-item {
+        background-color: #ddd;
+        padding: 10px;
+      }
 
-    socket.on('play', (time) => {
-        console.log('Play event received from server');
+
+      #video-container {
+        grid-row: 2 / span 3;
+        grid-column: 1;
+      }
+
+      #play {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      #pause {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+
+
+      #form {
+        background: rgba(0, 0, 0, 0.15);
+        padding: 0.25rem;
+        display: flex;
+        height: 3rem;
+        box-sizing: border-box;
+        backdrop-filter: blur(10px);
+        
+        grid-row: 4;
+        grid-column: 2;
+      }
+      #input {
+        border: none;
+        padding: 0 1rem;
+        flex-grow: 1;
+        border-radius: 2rem;
+        margin: 0.25rem;
+      }
+      #input:focus {
+        outline: none;
+      }
+      #form > button {
+        background: #333;
+        border: none;
+        padding: 0 1rem;
+        margin: 0.25rem;
+        border-radius: 3px;
+        outline: none;
+        color: #fff;
+      }
+
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        grid-row: 1 / span 3;
+        grid-column: 2;
+        overflow-y: auto;
+      }
+      #messages > li {
+        padding: 0.5rem 1rem;
+      }
+      #messages > li:nth-child(odd) {
+        background: #efefef;
+      }
+
+      #control-menu {
+        grid-row: 1;
+        grid-column: 1;
+      }
+
+    </style>
+  </head>
+
+  <body>
+
+
+    <div class="grid-container">
+      <ul id="messages" class="grid-item"></ul>
+      <form id="form" class="grid-item" action="">
+        <input id="input" autocomplete="off" /><button>Send</button>
+      </form>
+      
+      <div id="video-container" class="grid-item">
+        <video id="video" muted></video>
+      </div>
+      
+      <div id="control-menu" class="grid-item">
+        <button id="pause">Pause</button>
+        <button id="play">Play</button>
+      </div>
+    <div>
+
+    <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+      const player = dashjs.MediaPlayer().create();
+      player.initialize(
+        document.querySelector("#video"),
+        "http://localhost:3000/stream.mpd",
+        false
+      );
+
+      const pauseButton = document.getElementById("pause");
+      const playButton = document.getElementById("play");
+      const video = document.getElementById("video");
+
+      var messages = document.getElementById("messages");
+      var form = document.getElementById("form");
+      var input = document.getElementById("input");
+
+      var videoSocket = io("/video");
+
+      videoSocket.on("play", (time) => {
+        console.log("Play event received from server");
         player.seek(time);
         player.play();
-    });
+      });
 
-    // Handle pause event
-    socket.on('pause', () => {
-        console.log('Pause event received from server');
+      // Handle pause event
+      videoSocket.on("pause", () => {
+        console.log("Pause event received from server");
         player.pause();
-    });
+      });
 
-    // Handle seek event
-    socket.on('seek', (time) => {
-        console.log('Seek event received from server, time:', time);
+      // Handle seek event
+      videoSocket.on("seek", (time) => {
+        console.log("Seek event received from server, time:", time);
         player.seek(time);
-    });
+      });
 
-    // Handle play button click event
-    playButton.addEventListener('click', () => {
-        console.log('Play button clicked');
-        socket.emit('play');
-    });
+      // Handle play button click event
+      playButton.addEventListener("click", () => {
+        console.log("Play button clicked");
+        videoSocket.emit("play");
+      });
 
-    // Handle pause button click event
-    pauseButton.addEventListener('click', () => {
-        console.log('Pause button clicked');
-        socket.emit('pause');
-    });
+      // Handle pause button click event
+      pauseButton.addEventListener("click", () => {
+        console.log("Pause button clicked");
+        videoSocket.emit("pause");
+      });
 
-    video.addEventListener('ended', () => {
-        socket.emit('video end');
-    })
+      video.addEventListener("ended", () => {
+        videoSocket.emit("video end");
+      });
 
-    /**
-    // Handle seek bar change event
-    document.querySelector('#seekBar').addEventListener('change', (event) => {
-        const time = player.duration() * (event.target.value / 100);
-        console.log('Seek bar changed, time:', time);
-        socket.emit('seek', time);
-    });
-    */
+      //************************
 
-</script>
+      var chatSocket = io("/chat");
+
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        if (input.value) {
+          chatSocket.emit("chat message", input.value);
+          input.value = "";
+        }
+      });
+
+      chatSocket.on("chat message", function (msg) {
+        var item = document.createElement("li");
+        item.textContent = msg;
+        messages.appendChild(item);
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+    </script>
+  </body>
+</html>

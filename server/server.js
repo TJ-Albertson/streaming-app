@@ -58,7 +58,6 @@ app.get('/init-stream:number.m4s', (req, res) => {
 
 // socket
 const videoSocket = io.of("/video");
-
 videoSocket.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
   
@@ -93,6 +92,12 @@ videoSocket.on('connection', (socket) => {
   });
 });
 
+const chatSocket = io.of("/chat");
+chatSocket.on('connection', (socket) => {
+  socket.on('chat message', msg => {
+    chatSocket.emit('chat message', msg);
+  });
+});
 
 
 
